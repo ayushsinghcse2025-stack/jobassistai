@@ -1,0 +1,8 @@
+{
+  "name": "job-assist",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0"
+  }
+}

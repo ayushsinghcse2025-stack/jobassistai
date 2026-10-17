@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job assist — AI Job Application Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF0EA;
+    --paper-raised:#FBFAF6;
+    --card:#FFFFFF;
+    --ink:#1B211C;
+    --slate:#5B6259;
+    --line:#D6D9CC;
+    --line-strong:#B7BBAC;
+    --accent:#2B4C7E;
+    --accent-dim:#E4EAF3;
+    --accent-ink:#1C3357;
+    --bronze:#8A6D3B;
+    --bronze-dim:#F1E9D6;
+    --good:#3F7D58;
+    --good-dim:#E4F0E7;
+    --warn:#B3492C;
+    --warn-dim:#F6E4DD;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:14.5px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+    margin:0;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  textarea,input,select{font-family:inherit;font-size:14px;}
+
+  /* ---------- App shell ---------- */
+  .app{display:flex;min-height:100vh;}
+
+  /* ---------- Folder tab nav ---------- */
+  .rail{
+    width:220px;
+    flex-shrink:0;
+    background:var(--paper-raised);
+    border-right:1px solid var(--line);
+    padding:24px 0;
+    display:flex;
+    flex-direction:column;
+  }
+  .rail-brand{
+    padding:0 20px 20px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:8px;
+  }
+  .rail-brand .mark{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border:1.5px solid var(--ink);border-radius:6px;
+    font-family:'Space Grotesk';font-weight:700;font-size:14px;margin-bottom:10px;
+    transform:rotate(-3deg);
+  }
+  .rail-brand h1{font-size:17px;}
+  .rail-brand p{margin:4px 0 0;font-size:11.5px;color:var(--slate);letter-spacing:.03em;text-transform:uppercase;}
+
+  .tab{
+    display:flex;align-items:center;gap:11px;
+    padding:11px 20px;
+    color:var(--slate);
+    border-left:3px solid transparent;
+    font-size:14px;
+    position:relative;
+  }
+  .tab .num{
+    font-family:'IBM Plex Mono';font-size:10.5px;color:var(--line-strong);
+    width:16px;
+  }
+  .tab:hover{background:var(--accent-dim);color:var(--ink);cursor:pointer;}
+  .tab.active{
+    background:var(--card);
+    border-left-color:var(--accent);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .tab.active .num{color:var(--accent);}
+
+  .rail-foot{margin-top:auto;padding:16px 20px 0;border-top:1px solid var(--line);}
+  .rail-foot p{font-size:11px;color:var(--slate);margin:10px 0 0;line-height:1.5;}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+  .topbar{
+    padding:16px 32px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--paper-raised);flex-shrink:0;
+  }
+  .topbar h2{font-size:16px;}
+  .stage-chip{
+    font-family:'IBM Plex Mono';font-size:11px;color:var(--bronze);
+    background:var(--bronze-dim);border:1px solid #E0D3B0;padding:3px 10px;border-radius:20px;
+    letter-spacing:.03em;
+  }
+  .content{flex:1;overflow-y:auto;padding:28px 32px 60px;}
+
+  .panel{max-width:880px;}
+  .empty{
+    border:1px dashed var(--line-strong);border-radius:var(--radius);
+    padding:32px;text-align:center;color:var(--slate);background:var(--paper-raised);
+  }
+
+  /* ---------- Card ---------- */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:18px 20px;margin-bottom:16px;
+  }
+  .card h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em;}
+  .field input,.field select{
+    border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--paper-raised);
+    color:var(--ink);
+  }
+  .field input:focus,.field select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .field-full{grid-column:1/-1;}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+  .tag{
+    background:var(--accent-dim);color:var(--accent-ink);font-size:12px;padding:4px 10px;border-radius:20px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tag button{background:none;border:none;color:var(--accent-ink);font-size:13px;line-height:1;padding:0;opacity:.6;}
+  .tag button:hover{opacity:1;}
+  .add-tag{display:flex;gap:6px;margin-top:6px;}
+  .add-tag input{flex:1;border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:13px;}
+  .add-tag button{border:1px solid var(--line-strong);background:var(--paper-raised);border-radius:6px;padding:6px 10px;font-size:12px;}
+
+  .btn{
+    border:1px solid var(--ink);background:var(--ink);color:var(--paper-raised);
+    padding:9px 16px;border-radius:7px;font-size:13.5px;font-weight:500;
+  }
+  .btn:hover{opacity:.88;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line-strong);}
+  .btn-ghost:hover{background:var(--paper-raised);}
+  .btn-sm{padding:6px 11px;font-size:12.5px;border-radius:6px;}
+  .btn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* ---------- Chat ---------- */
+  .chat-wrap{display:flex;flex-direction:column;height:100%;}
+  .chat-log{flex:1;overflow-y:auto;padding:0 2px 12px;}
+  .msg{max-width:78%;margin-bottom:14px;padding:11px 15px;border-radius:12px;font-size:14.5px;line-height:1.55;white-space:pre-wrap;}
+  .msg.bot{background:var(--card);border:1px solid var(--line);margin-right:auto;border-top-left-radius:3px;}
+  .msg.user{background:var(--accent);color:#fff;margin-left:auto;border-top-right-radius:3px;}
+  .msg.typing{color:var(--slate);font-style:italic;}
+  .chat-input-row{display:flex;gap:10px;border-top:1px solid var(--line);padding-top:14px;margin-top:6px;}
+  .chat-input-row textarea{
+    flex:1;resize:none;border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    background:var(--card);min-height:44px;max-height:120px;
+  }
+
+  /* ---------- Stamp (signature element) ---------- */
+  .stamp{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    border:1.5px solid currentColor;border-radius:4px;padding:3px 9px;
+    transform:rotate(-2deg);
+  }
+  .stamp.saved{color:var(--slate);}
+  .stamp.preparing{color:var(--bronze);}
+  .stamp.ready{color:var(--accent);}
+  .stamp.applied{color:var(--accent-ink);background:var(--accent-dim);border-color:var(--accent);}
+  .stamp.screening{color:var(--bronze);background:var(--bronze-dim);border-color:var(--bronze);}
+  .stamp.interview{color:var(--good);background:var(--good-dim);border-color:var(--good);}
+  .stamp.offer{color:var(--good);background:var(--good-dim);border-color:var(--good);transform:rotate(-3deg);font-weight:600;}
+  .stamp.rejected{color:var(--warn);background:var(--warn-dim);border-color:var(--warn);}
+  .stamp.withdrawn{color:var(--slate);text-decoration:line-through;}
+
+  /* ---------- Match gauge ---------- */
+  .match-head{display:flex;align-items:center;gap:16px;margin-bottom:10px;}
+  .gauge{
+    width:56px;height:56px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono';font-weight:500;font-size:14px;
+    border:3px solid var(--accent);color:var(--accent-ink);background:var(--accent-dim);
+  }
+  .category-badge{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:500;}
+  .cat-best{background:var(--good-dim);color:var(--good);}
+  .cat-good{background:var(--accent-dim);color:var(--accent-ink);}
+  .cat-potential{background:var(--bronze-dim);color:var(--bronze);}
+
+  .breakdown{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:12px 0;}
+  .breakdown div{background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;padding:8px 10px;}
+  .breakdown .k{font-size:10.5px;color:var(--slate);text-transform:uppercase;letter-spacing:.03em;}
+  .breakdown .v{font-family:'IBM Plex Mono';font-size:15px;margin-top:2px;}
+
+  .skill-lists{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;}
+  .skill-lists h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--slate);margin:0 0 6px;}
+  .skill-lists .good li{color:var(--good);}
+  .skill-lists .miss li{color:var(--warn);}
+  .skill-lists ul{margin:0;padding-left:16px;font-size:13px;}
+
+  .flag-box{
+    margin-top:12px;background:var(--warn-dim);border:1px solid #E0BBAC;border-radius:8px;
+    padding:10px 12px;font-size:13px;color:#6f2c17;
+  }
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--slate);
+     border-bottom:1px solid var(--line-strong);padding:6px 8px;}
+  td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+
+  .resume-doc{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px 34px;
+    font-size:13.8px;line-height:1.65;white-space:pre-wrap;font-family:'IBM Plex Sans';
+  }
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(20,22,17,.5);display:flex;align-items:center;justify-content:center;
+    z-index:50;padding:20px;
+  }
+  .modal{
+    background:var(--paper-raised);border-radius:12px;max-width:560px;width:100%;max-height:86vh;overflow-y:auto;
+    padding:24px 26px;border:1px solid var(--line);
+  }
+  .modal h3{margin-bottom:14px;}
+  .modal-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .modal-row:last-of-type{border-bottom:none;}
+  .modal-row span:first-child{color:var(--slate);}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+
+  .stepper{display:flex;gap:4px;margin-bottom:22px;flex-wrap:wrap;}
+  .step{
+    font-family:'IBM Plex Mono';font-size:10.5px;padding:5px 9px;border-radius:5px;
+    background:var(--paper-raised);border:1px solid var(--line);color:var(--slate);
+  }
+  .step.done{background:var(--good-dim);color:var(--good);border-color:#B9DCC2;}
+  .step.now{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 20px;}
+  ::selection{background:var(--accent);color:#fff;}
+  a{color:var(--accent-ink);}
+  @media (max-width:760px){
+    .rail{width:64px;}
+    .rail-brand h1,.rail-brand p,.tab span.label{display:none;}
+    .field-row,.skill-lists,.breakdown{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <nav class="rail">
+    <div class="rail-brand">
+      <div class="mark">J</div>
+      <h1>Job Assist</h1>
+      <p>Job application assistant</p>
+    </div>
+    <div class="tab active" data-tab="chat"><span class="num">01</span><span class="label">Talk to Job Assist</span></div>
+    <div class="tab" data-tab="profile"><span class="num">02</span><span class="label">Profile</span></div>
+    <div class="tab" data-tab="resume"><span class="num">03</span><span class="label">Resume</span></div>
+    <div class="tab" data-tab="jobs"><span class="num">04</span><span class="label">Find &amp; match jobs</span></div>
+    <div class="tab" data-tab="applications"><span class="num">05</span><span class="label">Applications</span></div>
+    <div class="rail-foot">
+      <p>Nothing here is invented — resumes, match scores, and cover letters are built only from what you tell Job Assist.</p>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <h2 id="topbar-title">Talk to Job Assist</h2>
+      <span class="stage-chip mono" id="stage-chip">STAGE 01 · PROFILE</span>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   STATE
+   ========================================================= */
+const state = {
+  profile: {
+    personal:{name:'',email:'',phone:'',location:'',linkedin:'',portfolio:'',github:''},
+    career:{status:'',targetRole:'',jobType:'',experience:'',history:[],internships:[],projects:[],achievements:[]},
+    education:{qualification:'',degree:'',institution:'',gradYear:'',certifications:[]},
+    skills:{technical:[],programming:[],tools:[],soft:[],languages:[]},
+    preferences:{industries:[],locations:[],workMode:'',minSalary:'',jobTypes:[],companies:[],relocation:'',joiningDate:''}
+  },
+  resumeMarkdown:'',
+  jobMatches:[],
+  applications:[],
+  chat:[]
+};
+let jobCounter = 1, appCounter = 1;
+
+/* =========================================================
+   CLAUDE API HELPER
+   ========================================================= */
+async function callClaude(systemPrompt, userText, history = []) {
+
+    const response = await fetch("/api/chat", {
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            system: systemPrompt,
+            message: userText,
+            history: history.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }))
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+        throw new Error(data.error);
+    }
+
+    return data.reply;
+}
+/* =========================================================
+   PROFILE MERGE
+   ========================================================= */
+function deepMergeProfile(patch){
+  if(!patch || typeof patch !== 'object') return;
+  for(const section of Object.keys(patch)){
+    if(!state.profile[section]) continue;
+    const incoming = patch[section];
+    for(const key of Object.keys(incoming||{})){
+      const val = incoming[key];
+      if(val === null || val === undefined || val === '') continue;
+      if(Array.isArray(state.profile[section][key])){
+        const arr = Array.isArray(val) ? val : [val];
+        arr.forEach(v=>{
+          v = String(v).trim();
+          if(v && !state.profile[section][key].some(x=>x.toLowerCase()===v.toLowerCase())){
+            state.profile[section][key].push(v);
+          }
+        });
+      } else {
+        state.profile[section][key] = val;
+      }
+    }
+  }
+}
+
+function extractPatch(raw){
+  const marker = '===PROFILE_JSON===';
+  const idx = raw.indexOf(marker);
+  if(idx === -1) return {display:raw.trim(), patch:null};
+  const display = raw.slice(0,idx).trim();
+  let jsonPart = raw.slice(idx+marker.length).trim();
+  jsonPart = jsonPart.replace(/```json/gi,'').replace(/```/g,'').trim();
+  try{
+    return {display, patch: JSON.parse(jsonPart)};
+  }catch(e){
+    return {display, patch:null};
+  }
+}
+
+/* =========================================================
+   SYSTEM PROMPTS
+   ========================================================= */
+function profileSnapshot(){
+  return JSON.stringify(state.profile);
+}
+
+const CHAT_SYSTEM = () => `You are Job Assist, a warm, concise AI job-application assistant. Your ONLY job right now is conversational profile-building and general guidance about resumes/job search — never fabricate facts about the user.
+
+Rules:
+- Ask only for the most important missing info, one or two questions at a time. Never re-ask for info you already have.
+- Convert natural language into structured fields yourself (e.g. "software developer job in Delhi, remote, at least 6 LPA" -> role, location, workMode, minSalary).
+- Never invent qualifications, employers, skills, or achievements the user did not state.
+- Keep replies short (2-5 sentences), friendly, and end with a helpful next question when profile info is still missing. If the profile looks reasonably complete for a resume, tell the user they can head to the Resume tab.
+- Current known profile (JSON, may be partially empty): ${profileSnapshot()}
+
+CRITICAL OUTPUT FORMAT: after your conversational reply, on a new line, output exactly:
+===PROFILE_JSON===
+followed by a JSON object containing ONLY the NEW or UPDATED fields the user revealed in THIS message (partial patch, same shape as the profile: personal, career, education, skills, preferences). Array fields (like skills.technical) should be arrays of new items only. If nothing new was revealed, output {} after the marker. Never wrap the JSON in markdown fences.`;
+
+const RESUME_SYSTEM = () => `You write ATS-friendly resumes. Use ONLY the facts in this profile JSON — never invent employers, dates, skills, or achievements. If a section has no data, omit it entirely rather than guessing.
+
+Profile: ${profileSnapshot()}
+
+Output a clean plain-text resume (no markdown symbols like # or **, use simple ALL-CAPS section headers and hyphen bullets) with sections in this order when data exists: header (name/contact/links), Professional Summary, Skills, Work Experience, Projects, Education, Certifications, Achievements. Keep it tight, keyword-rich, and honest. Do not add a section if there is no underlying data for it.`;
+
+const MATCH_SYSTEM = () => `You are Job Assist's job-matching engine. Compare the candidate profile against a job description the user pasted. Never claim the job is still open beyond what the text says. Never invent salary or company facts not present in the JD. Flag anything that looks like a scam (upfront payment requests, personal financial info requests, unrealistic pay for no experience, vague company identity, etc).
+
+Candidate profile: ${profileSnapshot()}
+
+Respond ONLY with a single JSON object, no prose, no markdown fences, in exactly this shape:
+{
+  "company": string,
+  "position": string,
+  "location": string,
+  "workMode": string,
+  "salary": string or null (only if stated in JD, else null),
+  "experienceRequired": string,
+  "score": number (0-100, integer),
+  "category": "best" | "good" | "potential",
+  "breakdown": {"skills": number, "experience": number, "education": number, "location": number, "preferences": number},
+  "matchingSkills": [string],
+  "missingSkills": [string],
+  "reasoning": string (1-2 sentences on why this score),
+  "fraudFlags": [string] (empty array if none)
+}
+Weight essential requirements (must-have skills, minimum experience) higher than nice-to-haves.`;
+
+const COVERLETTER_SYSTEM = () => `Write a concise, personalized cover letter (under 300 words) using ONLY facts from the candidate profile and the job description provided. Never claim skills or experience the candidate does not have. Plain text, no markdown. Professional but not generic — reference 1-2 concrete things from the candidate's real background that fit this specific role.
+
+Candidate profile: ${profileSnapshot()}`;
+
+/* =========================================================
+   RENDER: TABS
+   ========================================================= */
+const tabs = ['chat','profile','resume','jobs','applications'];
+const titles = {chat:'Talk to Job Assist',profile:'Your profile',resume:'Resume',jobs:'Find & match jobs',applications:'Applications'};
+let activeTab = 'chat';
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    activeTab = t.dataset.tab;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===t));
+    document.getElementById('topbar-title').textContent = titles[activeTab];
+    renderContent();
+  });
+});
+
+function stageLabel(){
+  const p = state.profile;
+  const hasProfile = p.personal.name || p.career.targetRole;
+  if(state.applications.length) return 'STAGE 05 · TRACKING';
+  if(state.jobMatches.length) return 'STAGE 04 · MATCHING';
+  if(state.resumeMarkdown) return 'STAGE 03 · RESUME';
+  if(hasProfile) return 'STAGE 02 · PROFILE';
+  return 'STAGE 01 · PROFILE';
+}
+
+function renderAll(){
+  document.getElementById('stage-chip').textContent = stageLabel();
+  renderContent();
+}
+
+function renderContent(){
+  const c = document.getElementById('content');
+  c.innerHTML = '';
+  if(activeTab==='chat') renderChatTab(c);
+  if(activeTab==='profile') renderProfileTab(c);
+  if(activeTab==='resume') renderResumeTab(c);
+  if(activeTab==='jobs') renderJobsTab(c);
+  if(activeTab==='applications') renderApplicationsTab(c);
+  document.getElementById('stage-chip').textContent = stageLabel();
+}
+
+/* =========================================================
+   CHAT TAB
+   ========================================================= */
+function renderChatTab(container){
+  const wrap = document.createElement('div');
+  wrap.className = 'panel chat-wrap';
+  wrap.style.height = 'calc(100vh - 150px)';
+  wrap.innerHTML = `
+    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-input-row">
+      <textarea id="chat-input" placeholder="Tell me about the job you want, your experience, skills..."></textarea>
+      <button class="btn" id="chat-send">Send</button>
+    </div>
+  `;
+  container.appendChild(wrap);
+
+  if(state.chat.length === 0){
+    pushMessage('bot', "Hi! I'm Job Assist, your AI job application assistant. I can build your professional profile, create your resume, help you match against job listings you find, and prepare tailored applications — with your approval at every step.\n\nLet's start with your career goal: what type of job are you looking for?");
+  } else {
+    renderChatLog();
+  }
+
+  const input = document.getElementById('chat-input');
+  const send = document.getElementById('chat-send');
+  const doSend = ()=>sendChat(input.value.trim());
+  send.addEventListener('click', doSend);
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
+  });
+  input.focus();
+}
+
+function renderChatLog(){
+  const log = document.getElementById('chat-log');
+  if(!log) return;
+  log.innerHTML = '';
+  state.chat.forEach(m=>{
+    const div = document.createElement('div');
+    div.className = 'msg ' + (m.role==='user'?'user':'bot') + (m.typing?' typing':'');
+    div.textContent = m.content;
+    log.appendChild(div);
+  });
+  log.scrollTop = log.scrollHeight;
+}
+
+function pushMessage(role, content){
+  state.chat.push({role, content});
+  if(activeTab==='chat') renderChatLog();
+}
+
+async function sendChat(text){
+  if(!text) return;
+  const input = document.getElementById('chat-input');
+  input.value = '';
+  pushMessage('user', text);
+  state.chat.push({role:'assistant', content:'…', typing:true});
+  renderChatLog();
+
+  try{
+    const historyForApi = state.chat.filter(m=>!m.typing).slice(0,-1);
+    const raw = await callClaude(CHAT_SYSTEM(), text, historyForApi);
+    const {display, patch} = extractPatch(raw);
+    if(patch) deepMergeProfile(patch);
+    state.chat.pop();
+    pushMessage('bot', display || "Got it.");
+    document.getElementById('stage-chip').textContent = stageLabel();
+  }catch(e){
+    state.chat.pop();
+    pushMessage('bot', "I couldn't reach the assistant service just now — mind trying again in a moment?");
+  }
+}
+
+/* =========================================================
+   PROFILE TAB
+   ========================================================= */
+function tagField(container, label, section, key){
+  const wrap = document.createElement('div');
+  wrap.className = 'field field-full';
+  const items = state.profile[section][key];
+  wrap.innerHTML = `<label>${label}</label>
+    <div class="tags" data-tags></div>
+    <div class="add-tag"><input type="text" placeholder="Add ${label.toLowerCase()}..."><button class="btn-sm btn-ghost" type="button">Add</button></div>`;
+  container.appendChild(wrap);
+  const tagsDiv = wrap.querySelector('[data-tags]');
+  function draw(){
+    tagsDiv.innerHTML = '';
+    items.forEach((it,i)=>{
+      const t = document.createElement('span');
+      t.className = 'tag';
+      t.innerHTML = `${it} <button type="button">&times;</button>`;
+      t.querySelector('button').addEventListener('click', ()=>{ items.splice(i,1); draw(); });
+      tagsDiv.appendChild(t);
+    });
+  }
+  draw();
+  const addInput = wrap.querySelector('input');
+  const addBtn = wrap.querySelector('.add-tag button');
+  function add(){
+    const v = addInput.value.trim();
+    if(v){ items.push(v); addInput.value=''; draw(); }
+  }
+  addBtn.addEventListener('click', add);
+  addInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); add(); } });
+}
+
+function textField(container, label, section, key, full){
+  const wrap = document.createElement('div');
+  wrap.className = 'field' + (full?' field-full':'');
+  wrap.innerHTML = `<label>${label}</label><input type="text" value="${(state.profile[section][key]||'').replace(/"/g,'&quot;')}">`;
+  wrap.querySelector('input').addEventListener('input', e=>{ state.profile[section][key] = e.target.value; });
+  container.appendChild(wrap);
+}
+
+function renderProfileTab(container){
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+
+  const personal = document.createElement('div');
+  personal.className = 'card';
+  personal.innerHTML = `<h3>Personal</h3>`;
+  const pr = document.createElement('div'); pr.className='field-row';
+  personal.appendChild(pr);
+  ['name:Full name','email:Email','phone:Phone','location:City / Country','linkedin:LinkedIn','portfolio:Portfolio','github:GitHub'].forEach(pair=>{
+    const [key,label] = pair.split(':');
+    textField(pr, label, 'personal', key);
+  });
+  panel.appendChild(personal);
+
+  const career = document.createElement('div');
+  career.className = 'card';
+  career.innerHTML = `<h3>Career</h3>`;
+  const cr = document.createElement('div'); cr.className='field-row';
+  career.appendChild(cr);
+  textField(cr,'Current status','career','status');
+  textField(cr,'Target role','career','targetRole');
+  textField(cr,'Job type','career','jobType');
+  textField(cr,'Years of experience','career','experience');
+  panel.appendChild(career);
+
+  const education = document.createElement('div');
+  education.className = 'card';
+  education.innerHTML = `<h3>Education</h3>`;
+  const er = document.createElement('div'); er.className='field-row';
+  education.appendChild(er);
+  textField(er,'Highest qualification','education','qualification');
+  textField(er,'Degree / course','education','degree');
+  textField(er,'Institution','education','institution');
+  textField(er,'Graduation year','education','gradYear');
+  tagField(education,'Certifications','education','certifications');
+  panel.appendChild(education);
+
+  const skills = document.createElement('div');
+  skills.className = 'card';
+  skills.innerHTML = `<h3>Skills</h3>`;
+  tagField(skills,'Technical skills','skills','technical');
+  tagField(skills,'Programming languages','skills','programming');
+  tagField(skills,'Tools / software','skills','tools');
+  tagField(skills,'Soft skills','skills','soft');
+  tagField(skills,'Spoken languages','skills','languages');
+  panel.appendChild(skills);
+
+  const prefs = document.createElement('div');
+  prefs.className = 'card';
+  prefs.innerHTML = `<h3>Job preferences</h3>`;
+  const prr = document.createElement('div'); prr.className='field-row';
+  prefs.appendChild(prr);
+  textField(prr,'Work mode','preferences','workMode');
+  textField(prr,'Minimum salary','preferences','minSalary');
+  textField(prr,'Relocation','preferences','relocation');
+  textField(prr,'Preferred joining date','preferences','joiningDate');
+  tagField(prefs,'Industries','preferences','industries');
+  tagField(prefs,'Preferred locations','preferences','locations');
+  tagField(prefs,'Job types','preferences','jobTypes');
+  tagField(prefs,'Preferred companies','preferences','companies');
+  panel.appendChild(prefs);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn';
+  saveBtn.textContent = 'Save profile';
+  saveBtn.addEventListener('click', ()=>{ renderAll(); });
+  panel.appendChild(saveBtn);
+
+  container.appendChild(panel);
+}
+
+/* =========================================================
+   RESUME TAB
+   ========================================================= */
+function hasEnoughForResume(){
+  const p = state.profile;
+  return p.personal.name && (p.career.targetRole || p.skills.technical.length);
+}
+
+function renderResumeTab(container){
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+
+  if(!hasEnoughForResume() && !state.resumeMarkdown){
+    panel.innerHTML = `<div class="empty">Add at least your name and a target role or some skills on the Profile tab (or tell Job Assist about yourself in Chat) before generating a resume.</div>`;
+    container.appendChild(panel);
+    return;
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'quick-actions';
+  const genBtn = document.createElement('button');
+  genBtn.className = 'btn';
+  genBtn.textContent = state.resumeMarkdown ? 'Regenerate resume' : 'Generate resume';
+  actions.appendChild(genBtn);
+
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'btn btn-ghost';
+  dlBtn.textContent = 'Download as .txt';
+  dlBtn.style.display = state.resumeMarkdown ? '' : 'none';
+  dlBtn.addEventListener('click', ()=>downloadText('resume.txt', state.resumeMarkdown));
+  actions.appendChild(dlBtn);
+
+  panel.appendChild(actions);
+
+  const status = document.createElement('p');
+  status.style.color = 'var(--slate)';
+  status.style.fontSize = '13px';
+  panel.appendChild(status);
+
+  const doc = document.createElement('div');
+  doc.className = 'resume-doc';
+  doc.textContent = state.resumeMarkdown || 'Your resume will appear here once generated — built only from what you\'ve told Job Assist.';
+  panel.appendChild(doc);
+
+  genBtn.addEventListener('click', async ()=>{
+    genBtn.disabled = true;
+    status.textContent = 'Writing your resume from your profile…';
+    try{
+      const raw = await callClaude(RESUME_SYSTEM(), 'Generate the resume now.', []);
+      state.resumeMarkdown = raw;
+      const contentEl = document.getElementById('content');
+      contentEl.innerHTML = '';
+      renderResumeTab(contentEl);
+    }catch(e){
+      status.textContent = "Couldn't generate the resume — try again in a moment.";
+      genBtn.disabled = false;
+    }
+  });
+
+  container.appendChild(panel);
+}
+
+/* =========================================================
+   JOBS TAB
+   ========================================================= */
+function renderJobsTab(container){
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+
+  panel.innerHTML = `
+    <div class="card">
+      <h3>Paste a job listing</h3>
+      <p style="color:var(--slate);font-size:13px;margin:-4px 0 10px;">Job Assist doesn't have live access to job boards — paste in a job description (and its URL, if you have one) and I'll score your match against it honestly, no guessing on salary or company facts not stated.</p>
+      <div class="field field-full">
+        <label>Job URL (optional)</label>
+        <input type="text" id="jd-url" placeholder="https://...">
+      </div>
+      <div class="field field-full" style="margin-top:8px;">
+        <label>Job description</label>
+        <textarea id="jd-text" rows="7" style="border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--paper-raised);"></textarea>
+      </div>
+      <div style="margin-top:12px;"><button class="btn" id="analyze-btn">Analyze match</button></div>
+      <p id="jd-status" style="font-size:13px;color:var(--slate);margin-top:8px;"></p>
+    </div>
+    <div id="matches-list"></div>
+  `;
+  container.appendChild(panel);
+
+  document.getElementById('analyze-btn').addEventListener('click', analyzeJobDescription);
+  renderMatchesList();
+}
+
+async function analyzeJobDescription(){
+  const jdText = document.getElementById('jd-text').value.trim();
+  const jdUrl = document.getElementById('jd-url').value.trim();
+  const statusEl = document.getElementById('jd-status');
+  if(!jdText){ statusEl.textContent = 'Paste the job description text first.'; statusEl.style.color = 'var(--warn)'; return; }
+  if(!state.profile.personal.name && !state.profile.skills.technical.length){
+    statusEl.textContent = 'Build out your profile a bit first (Chat or Profile tab) so the match is meaningful.';
+    statusEl.style.color = 'var(--warn)';
+    return;
+  }
+  statusEl.style.color = 'var(--slate)';
+  statusEl.textContent = 'Comparing this listing against your profile…';
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  try{
+    const raw = await callClaude(MATCH_SYSTEM(), `Job description:\n${jdText}`, []);
+    const cleaned = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const result = JSON.parse(cleaned);
+    result.id = 'job-' + (jobCounter++);
+    result.jdText = jdText;
+    result.jobUrl = jdUrl;
+    state.jobMatches.unshift(result);
+    document.getElementById('jd-text').value = '';
+    document.getElementById('jd-url').value = '';
+    statusEl.textContent = '';
+    renderMatchesList();
+  }catch(e){
+    statusEl.textContent = "Couldn't analyze that listing — try again in a moment.";
+    statusEl.style.color = 'var(--warn)';
+  }
+  btn.disabled = false;
+}
+
+function categoryMeta(cat){
+  if(cat==='best') return {label:'🔥 Best match', cls:'cat-best'};
+  if(cat==='good') return {label:'⭐ Good match', cls:'cat-good'};
+  return {label:'📚 Potential match', cls:'cat-potential'};
+}
+
+function renderMatchesList(){
+  const list = document.getElementById('matches-list');
+  if(!list) return;
+  list.innerHTML = '';
+  if(state.jobMatches.length===0){
+    list.innerHTML = '<div class="empty">No jobs analyzed yet. Paste a listing above to get a match score.</div>';
+    return;
+  }
+  state.jobMatches.forEach(job=>{
+    const meta = categoryMeta(job.category);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="match-head">
+        <div class="gauge">${job.score}%</div>
+        <div style="flex:1;">
+          <h3 style="margin-bottom:2px;">${escapeHtml(job.position||'Position')} — ${escapeHtml(job.company||'Company')}</h3>
+          <p style="color:var(--slate);font-size:13px;margin:0;">${escapeHtml(job.location||'Location n/a')} · ${escapeHtml(job.workMode||'Mode n/a')} ${job.salary?(' · '+escapeHtml(job.salary)):' · Salary not stated'}</p>
+        </div>
+        <span class="category-badge ${meta.cls}">${meta.label}</span>
+      </div>
+      <p style="font-size:13px;color:var(--ink);">${escapeHtml(job.reasoning||'')}</p>
+      <div class="breakdown">
+        <div><div class="k">Skills</div><div class="v mono">${job.breakdown?.skills ?? '–'}%</div></div>
+        <div><div class="k">Experience</div><div class="v mono">${job.breakdown?.experience ?? '–'}%</div></div>
+        <div><div class="k">Education</div><div class="v mono">${job.breakdown?.education ?? '–'}%</div></div>
+        <div><div class="k">Location</div><div class="v mono">${job.breakdown?.location ?? '–'}%</div></div>
+        <div><div class="k">Preferences</div><div class="v mono">${job.breakdown?.preferences ?? '–'}%</div></div>
+      </div>
+      <div class="skill-lists">
+        <div class="good"><h4>Matching skills</h4><ul>${(job.matchingSkills||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('') || '<li style="color:var(--slate)">None identified</li>'}</ul></div>
+        <div class="miss"><h4>Missing / weak</h4><ul>${(job.missingSkills||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('') || '<li style="color:var(--slate)">None identified</li>'}</ul></div>
+      </div>
+      ${job.fraudFlags && job.fraudFlags.length ? `<div class="flag-box"><strong>Heads up:</strong> ${job.fraudFlags.map(escapeHtml).join('; ')}</div>` : ''}
+      <div class="quick-actions" style="margin-top:14px;margin-bottom:0;">
+        <button class="btn btn-sm" data-action="prepare" data-id="${job.id}">Prepare application</button>
+        ${job.jobUrl ? `<a class="btn btn-sm btn-ghost" href="${escapeHtml(job.jobUrl)}" target="_blank" rel="noopener">Open listing ↗</a>` : ''}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  list.querySelectorAll('[data-action="prepare"]').forEach(b=>{
+    b.addEventListener('click', ()=>openPrepareModal(b.dataset.id));
+  });
+}
+
+function escapeHtml(s){
+  return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =========================================================
+   PREPARE APPLICATION MODAL
+   ========================================================= */
+async function openPrepareModal(jobId){
+  const job = state.jobMatches.find(j=>j.id===jobId);
+  if(!job) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Prepare application</h3>
+      <p id="prep-status" style="font-size:13px;color:var(--slate);">Drafting a tailored cover letter…</p>
+      <div id="prep-body" style="display:none;">
+        <div class="modal-row"><span>Company</span><span>${escapeHtml(job.company)}</span></div>
+        <div class="modal-row"><span>Position</span><span>${escapeHtml(job.position)}</span></div>
+        <div class="modal-row"><span>Location</span><span>${escapeHtml(job.location)}</span></div>
+        <div class="modal-row"><span>Job source</span><span>${job.jobUrl ? 'Link provided' : 'Pasted description'}</span></div>
+        <div class="modal-row"><span>Resume version</span><span>${state.resumeMarkdown ? 'Current resume on file' : 'No resume generated yet'}</span></div>
+        <h3 style="margin-top:16px;font-size:13px;">Cover letter (preview)</h3>
+        <div class="resume-doc" id="cover-preview" style="font-size:12.5px;max-height:220px;overflow-y:auto;padding:14px 16px;"></div>
+        <p style="font-size:12.5px;color:var(--slate);margin-top:10px;">Job Assist can't submit this on job boards directly. Confirming below saves it to your tracker as <strong>Ready to apply</strong> with these materials attached — you'll submit it on the employer's site.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="prep-cancel">Cancel</button>
+        <button class="btn" id="prep-confirm" style="display:none;">Add to tracker</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('prep-cancel').addEventListener('click', ()=>overlay.remove());
+
+  let coverLetter = '';
+  try{
+    coverLetter = await callClaude(COVERLETTER_SYSTEM(), `Job description:\n${job.jdText}\n\nCompany: ${job.company}\nPosition: ${job.position}`, []);
+  }catch(e){
+    coverLetter = "Couldn't generate a cover letter automatically — you can write one manually.";
+  }
+  job.coverLetter = coverLetter;
+  document.getElementById('prep-status').style.display = 'none';
+  document.getElementById('prep-body').style.display = '';
+  document.getElementById('cover-preview').textContent = coverLetter;
+  const confirmBtn = document.getElementById('prep-confirm');
+  confirmBtn.style.display = '';
+  confirmBtn.addEventListener('click', ()=>{
+    state.applications.push({
+      id: 'app-'+(appCounter++),
+      company: job.company, position: job.position, location: job.location,
+      status: 'Ready to Apply', dateAdded: new Date().toISOString().slice(0,10),
+      resumeVersion: state.resumeMarkdown ? 'Current resume' : 'None on file',
+      followUp: '', notes: '', jobUrl: job.jobUrl || '', coverLetter
+    });
+    overlay.remove();
+    activeTab = 'applications';
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab==='applications'));
+    document.getElementById('topbar-title').textContent = titles.applications;
+    renderContent();
+  });
+}
+
+/* =========================================================
+   APPLICATIONS TAB
+   ========================================================= */
+const STATUSES = ['Saved','Preparing','Ready to Apply','Applied','Screening','Interview','Offer','Rejected','Withdrawn'];
+function statusClass(s){
+  return s.toLowerCase().replace(/\s+/g,'').replace('readytoapply','ready');
+}
+
+function renderApplicationsTab(container){
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+
+  if(state.applications.length===0){
+    panel.innerHTML = `<div class="empty">No applications yet. Analyze a job in <strong>Find &amp; match jobs</strong> and choose <strong>Prepare application</strong> to add one here.</div>`;
+    container.appendChild(panel);
+    return;
+  }
+
+  const table = document.createElement('div');
+  table.className = 'card';
+  table.innerHTML = `
+    <table>
+      <thead><tr><th>Company</th><th>Position</th><th>Status</th><th>Added</th><th>Resume</th><th></th></tr></thead>
+      <tbody id="app-rows"></tbody>
+    </table>
+  `;
+  panel.appendChild(table);
+  container.appendChild(panel);
+
+  const rows = document.getElementById('app-rows');
+  state.applications.forEach(app=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(app.company)}</td>
+      <td>${escapeHtml(app.position)}</td>
+      <td><span class="stamp ${statusClass(app.status)}">${escapeHtml(app.status)}</span></td>
+      <td class="mono" style="font-size:12px;">${app.dateAdded}</td>
+      <td style="font-size:12px;color:var(--slate);">${escapeHtml(app.resumeVersion)}</td>
+      <td><select data-id="${app.id}" style="border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;"></select></td>
+    `;
+    const sel = tr.querySelector('select');
+    STATUSES.forEach(s=>{
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      if(s===app.status) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', e=>{
+      app.status = e.target.value;
+      if(app.status === 'Applied' && !app.appliedDate){
+        app.appliedDate = new Date().toISOString().slice(0,10);
+      }
+      renderApplicationsTab(document.getElementById('content'));
+      document.getElementById('content').innerHTML='';
+      renderApplicationsTab(document.getElementById('content'));
+    });
+    rows.appendChild(tr);
+  });
+}
+
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+renderAll();
+</script>
+</body>
+</html>
